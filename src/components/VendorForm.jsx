@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { vendorAPI } from '../services/api';
+import LanguageSwitcher from './LanguageSwitcher';
 import './VendorForm.css';
 
 const VendorForm = () => {
+  const { t } = useTranslation();
+
   const [formData, setFormData] = useState({
     name: '',
     contact: '',
@@ -10,13 +14,12 @@ const VendorForm = () => {
     address: '',
     serviceCategory: '',
     rate: '',
-    rateType: 'hourly'
+    rateType: 'hourly',
   });
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  // Service categories
   const serviceCategories = [
     'electrician',
     'plumber',
@@ -25,15 +28,12 @@ const VendorForm = () => {
     'painter',
     'technician',
     'gardener',
-    'mason'
+    'mason',
   ];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -42,21 +42,15 @@ const VendorForm = () => {
     setMessage({ type: '', text: '' });
 
     try {
-      // Prepare data for API
       const submitData = {
         ...formData,
-        rate: formData.rate ? parseFloat(formData.rate) : undefined
+        rate: formData.rate ? parseFloat(formData.rate) : undefined,
       };
 
       const response = await vendorAPI.register(submitData);
-      
+
       if (response.data.success) {
-        setMessage({
-          type: 'success',
-          text: response.data.message
-        });
-        
-        // Reset form
+        setMessage({ type: 'success', text: t('success') });
         setFormData({
           name: '',
           contact: '',
@@ -64,14 +58,14 @@ const VendorForm = () => {
           address: '',
           serviceCategory: '',
           rate: '',
-          rateType: 'hourly'
+          rateType: 'hourly',
         });
       }
     } catch (error) {
       console.error('Registration error:', error);
       setMessage({
         type: 'error',
-        text: error.response?.data?.message || 'Registration failed. Please try again.'
+        text: error.response?.data?.message || t('error'),
       });
     } finally {
       setLoading(false);
@@ -81,9 +75,11 @@ const VendorForm = () => {
   return (
     <div className="vendor-form-container">
       <div className="form-wrapper">
+        <LanguageSwitcher />
+
         <div className="form-header">
-          <h1>Vendor Registration</h1>
-          <p>Join our workforce network and get connected with clients</p>
+          <h1>{t('title')}</h1>
+          <p>{t('subtitle')}</p>
         </div>
 
         {message.text && (
@@ -93,13 +89,13 @@ const VendorForm = () => {
         )}
 
         <form onSubmit={handleSubmit} className="vendor-form">
-          {/* Personal Information Section */}
+          {/* ---------- Personal Information ---------- */}
           <div className="form-section">
-            <h3>Personal Information</h3>
-            
+            <h3>{t('personalInfo')}</h3>
+
             <div className="form-grid">
               <div className="form-group">
-                <label htmlFor="name">Full Name *</label>
+                <label htmlFor="name">{t('fullName')}</label>
                 <input
                   type="text"
                   id="name"
@@ -107,12 +103,13 @@ const VendorForm = () => {
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  placeholder="Enter your full name"
+                  placeholder={t('phName')}
+                  disabled={loading}
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="contact">Contact Number *</label>
+                <label htmlFor="contact">{t('contact')}</label>
                 <input
                   type="tel"
                   id="contact"
@@ -120,96 +117,109 @@ const VendorForm = () => {
                   value={formData.contact}
                   onChange={handleChange}
                   required
-                  placeholder="Enter your contact number"
+                  placeholder={t('phContact')}
+                  disabled={loading}
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="email">Email Address</label>
+                <label htmlFor="email">{t('email')}</label>
                 <input
                   type="email"
                   id="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="Enter your email address"
+                  placeholder={t('phEmail')}
+                  disabled={loading}
                 />
               </div>
 
               <div className="form-group full-width">
-                <label htmlFor="address">Address *</label>
+                <label htmlFor="address">{t('address')}</label>
                 <textarea
                   id="address"
                   name="address"
                   value={formData.address}
                   onChange={handleChange}
                   required
-                  placeholder="Enter your complete address"
+                  placeholder={t('phAddress')}
                   rows="3"
+                  disabled={loading}
                 />
               </div>
             </div>
           </div>
 
-          {/* Service Information Section */}
+          {/* ---------- Service Information ---------- */}
           <div className="form-section">
-            <h3>Service Information</h3>
-            
+            <h3>{t('serviceInfo')}</h3>
+
             <div className="form-grid">
               <div className="form-group">
-                <label htmlFor="serviceCategory">Service Category *</label>
+                <label htmlFor="serviceCategory">{t('serviceCategory')}</label>
                 <select
                   id="serviceCategory"
                   name="serviceCategory"
                   value={formData.serviceCategory}
                   onChange={handleChange}
                   required
+                  disabled={loading}
                 >
-                  <option value="">Select a category</option>
-                  {serviceCategories.map(category => (
-                    <option key={category} value={category}>
-                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                  <option value="">{t('selectCategory')}</option>
+                  {serviceCategories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group">
-                <label htmlFor="rateType">Rate Type</label>
+                <label htmlFor="rateType">{t('rateType')}</label>
                 <select
                   id="rateType"
                   name="rateType"
                   value={formData.rateType}
                   onChange={handleChange}
+                  disabled={loading}
                 >
-                  <option value="hourly">Hourly</option>
-                  <option value="per-job">Per Job</option>
+                  <option value="hourly">{t('hourly')}</option>
+                  <option value="per-job">{t('perJob')}</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label htmlFor="rate">Rate (Optional)</label>
+                <label htmlFor="rate">{t('rate')}</label>
                 <input
                   type="number"
                   id="rate"
                   name="rate"
                   value={formData.rate}
                   onChange={handleChange}
-                  placeholder="0.00"
+                  placeholder={t('phRate')}
                   min="0"
                   step="0.01"
+                  disabled={loading}
                 />
               </div>
             </div>
           </div>
 
           <div className="form-actions">
-            <button 
-              type="submit" 
-              className="submit-btn"
+            <button
+              type="submit"
+              className={`submit-btn ${loading ? 'loading' : ''}`}
               disabled={loading}
             >
-              {loading ? 'Registering...' : 'Register as Vendor'}
+              {loading ? (
+                <>
+                  <div className="button-spinner"></div>
+                  {t('submitting')}
+                </>
+              ) : (
+                t('submit')
+              )}
             </button>
           </div>
         </form>
