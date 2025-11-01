@@ -1,13 +1,12 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-//import './LanguageSwitcher.css';
+import './LanguageSwitcher.css';
 
 const LanguageSwitcher = () => {
   const { i18n, t } = useTranslation();
 
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
-    localStorage.setItem('i18nextLng', lng);
   };
 
   return (
@@ -17,13 +16,13 @@ const LanguageSwitcher = () => {
         onClick={() => changeLanguage('en')}
         className={`lang-btn ${i18n.language === 'en' ? 'active' : ''}`}
       >
-        {t('en')}
+        {t('english')}
       </button>
       <button
         onClick={() => changeLanguage('hi')}
         className={`lang-btn ${i18n.language === 'hi' ? 'active' : ''}`}
       >
-        {t('hi')}
+        {t('hindi')}
       </button>
     </div>
   );
