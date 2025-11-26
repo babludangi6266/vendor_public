@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://vendor-backend-4v8l.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://vendor-backend-5zph.onrender.com/api';
 
 // Create axios instance
 const api = axios.create({
@@ -20,7 +20,7 @@ const apiWithFormData = axios.create({
   timeout: 60000,
 });
 
-// Candidate API calls
+
 export const candidateAPI = {
   register: (candidateData) => {
     return apiWithFormData.post('/candidates/register', candidateData);
@@ -33,10 +33,10 @@ export const candidateAPI = {
   },
   // FIXED: Payment endpoints should be under candidates
   createOrder: (orderData) => {
-    return api.post('/candidates/create-order', orderData); // Changed from /payments/create-order
+    return api.post('/candidates/create-order', orderData); 
   },
   verifyPayment: (paymentData) => {
-    return api.post('/candidates/verify-payment', paymentData); // Changed from /payments/verify-payment
+    return api.post('/candidates/verify-payment', paymentData); 
   },
   getAll: () => api.get('/candidates'),
 };
