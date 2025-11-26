@@ -13,34 +13,35 @@ const CompanyRegistration = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    companyName: '',
-    contactPerson: '',
-    mobile: '',
-    email: '',
-    address: {
-      street: '',
-      city: '',
-      state: '',
-      pincode: ''
-    },
-    categories: [],
-    candidateQuantity: '',
-    experience: {
-      years: '',
-      months: '',
-      days: ''
-    },
-    jobLocation: {
-      city: '',
-      state: ''
-    },
-    businessDocument: null
-  });
+  
+ const [formData, setFormData] = useState({
+  companyName: '',
+  contactPerson: '',
+  mobile: '',
+  email: '',
+  address: {
+    street: '',
+    city: '',
+    state: '',
+    pincode: ''
+  },
+  category: '',
+  candidateQuantity: '',
+  experience: {
+    years: '',
+    months: '',
+    days: ''
+  },
+  jobLocation: {
+    city: '',
+    state: ''
+  },
+  businessDocument: null,
+  otp: ''
+});
 
-  // COMMENTED: OTP states - set OTP verified to true by default for testing
   const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(true); // Set to true to bypass OTP
+  const [otpVerified, setOtpVerified] = useState(false);
   const [documentPreview, setDocumentPreview] = useState(null);
 
   const categories = [
@@ -92,6 +93,10 @@ const CompanyRegistration = () => {
       toast.error('Please enter a valid 10-digit mobile number starting with 6-9');
       return false;
     }
+    if (!otpVerified) {
+      toast.error('Please verify your mobile number with OTP');
+      return false;
+    }
     if (!validateEmail(formData.email)) {
       toast.error('Please enter a valid email address');
       return false;
@@ -116,8 +121,8 @@ const CompanyRegistration = () => {
   };
 
   const validateStep2 = () => {
-    if (!formData.categories || formData.categories.length === 0) {
-      toast.error('Please select at least one category');
+    if (!formData.category) {
+      toast.error('Please select a category');
       return false;
     }
     if (!formData.candidateQuantity || formData.candidateQuantity < 1) {
@@ -143,17 +148,15 @@ const CompanyRegistration = () => {
   };
 
   const handleInputChange = (e) => {
-    const { name, value, files, type, checked } = e.target;
+    const { name, value, files, type } = e.target;
     
     if (type === 'file') {
       const file = files[0];
       if (file) {
-        // Validate file size (2MB max)
         if (file.size > 2 * 1024 * 1024) {
           toast.error('File size should be less than 2MB');
           return;
         }
-        // Validate file type
         const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
         if (!allowedTypes.includes(file.type)) {
           toast.error('Please upload PDF, JPG, or PNG files only');
@@ -162,7 +165,6 @@ const CompanyRegistration = () => {
         
         setFormData(prev => ({ ...prev, [name]: file }));
         
-        // Create preview for images
         if (file.type.startsWith('image/')) {
           const reader = new FileReader();
           reader.onload = (e) => setDocumentPreview(e.target.result);
@@ -173,11 +175,6 @@ const CompanyRegistration = () => {
         
         toast.success('Document uploaded successfully!');
       }
-    } else if (name === 'categories') {
-      const updatedCategories = checked 
-        ? [...(formData.categories || []), value]
-        : (formData.categories || []).filter(cat => cat !== value);
-      setFormData(prev => ({ ...prev, categories: updatedCategories }));
     } else if (name.startsWith('address.')) {
       const field = name.split('.')[1];
       setFormData(prev => ({
@@ -201,7 +198,7 @@ const CompanyRegistration = () => {
     }
   };
 
-  // COMMENTED: OTP functionality - keeping but bypassing
+  // OTP functionality
   const handleSendOtp = async () => {
     if (!validateMobile(formData.mobile)) {
       toast.error('Please enter a valid 10-digit mobile number');
@@ -210,29 +207,51 @@ const CompanyRegistration = () => {
 
     setOtpLoading(true);
     try {
-      console.log('OTP functionality commented for testing');
-      setOtpSent(true);
-      toast.info('OTP functionality is temporarily disabled. You can proceed.');
+      const response = await companyAPI.sendOtp(formData.mobile);
+      
+      if (response.data.success) {
+        setOtpSent(true);
+        toast.success('OTP sent successfully to your mobile number!');
+      }
     } catch (error) {
-      toast.error('Failed to send OTP. Please try again.');
+      console.error('Send OTP error:', error);
+      let errorMessage = 'Failed to send OTP. Please try again.';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        errorMessage = error.response.data.errors[0]?.msg || errorMessage;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setOtpLoading(false);
     }
   };
 
   const handleVerifyOtp = async () => {
-    if (formData.otp && formData.otp.length !== 6) {
-      toast.error('Please enter a valid 6-digit OTP');
-      return;
-    }
-
+  if (!formData.otp || formData.otp.length !== 6) {
+    toast.error('Please enter a valid 6-digit OTP');
+    return;
+  }
     setOtpLoading(true);
     try {
-      console.log('OTP verification commented for testing');
-      setOtpVerified(true);
-      toast.success('OTP verified successfully!');
+      const response = await companyAPI.verifyOtp(formData.mobile, formData.otp);
+      
+      if (response.data.success) {
+        setOtpVerified(true);
+        toast.success('OTP verified successfully!');
+      }
     } catch (error) {
-      toast.error('Invalid OTP. Please try again.');
+      console.error('Verify OTP error:', error);
+      let errorMessage = 'Invalid OTP. Please try again.';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      toast.error(errorMessage);
+      setOtpVerified(false);
     } finally {
       setOtpLoading(false);
     }
@@ -254,49 +273,32 @@ const CompanyRegistration = () => {
     setLoading(true);
     
     try {
-      // Create FormData for file upload
       const submitData = new FormData();
       submitData.append('companyName', formData.companyName);
       submitData.append('contactPerson', formData.contactPerson);
       submitData.append('mobile', formData.mobile);
       submitData.append('email', formData.email);
       
-      // Send address as individual fields
       submitData.append('address[street]', formData.address.street);
       submitData.append('address[city]', formData.address.city);
       submitData.append('address[state]', formData.address.state);
       submitData.append('address[pincode]', formData.address.pincode);
       
-      // Send categories as individual fields (not JSON string)
-      formData.categories.forEach((category, index) => {
-        submitData.append(`categories[${index}]`, category);
-      });
+      submitData.append('category', formData.category); // Single category
       
       submitData.append('candidateQuantity', formData.candidateQuantity);
       
-      // Send experience as individual fields
       submitData.append('experience[years]', formData.experience.years || '0');
       submitData.append('experience[months]', formData.experience.months || '0');
       submitData.append('experience[days]', formData.experience.days || '0');
       
-      // Send jobLocation as individual fields
       submitData.append('jobLocation[city]', formData.jobLocation.city);
       submitData.append('jobLocation[state]', formData.jobLocation.state);
       
       submitData.append('businessDocument', formData.businessDocument);
 
-      console.log('Submitting company data to backend...', {
-        companyName: formData.companyName,
-        contactPerson: formData.contactPerson,
-        mobile: formData.mobile,
-        categories: formData.categories,
-        jobLocation: formData.jobLocation
-      });
-
-      // Show loading toast
       const loadingToast = toast.loading('Submitting company registration...');
 
-      // ACTUAL API CALL
       const response = await companyAPI.register(submitData);
 
       toast.dismiss(loadingToast);
@@ -304,32 +306,35 @@ const CompanyRegistration = () => {
       if (response.data.success) {
         toast.success('Company registration successful! Redirecting to home page...');
         
-        // Reset form
-        setFormData({
-          companyName: '',
-          contactPerson: '',
-          mobile: '',
-          email: '',
-          address: {
-            street: '',
-            city: '',
-            state: '',
-            pincode: ''
-          },
-          categories: [],
-          candidateQuantity: '',
-          experience: {
-            years: '',
-            months: '',
-            days: ''
-          },
-          jobLocation: {
-            city: '',
-            state: ''
-          },
-          businessDocument: null
-        });
+       // Reset form
+setFormData({
+  companyName: '',
+  contactPerson: '',
+  mobile: '',
+  email: '',
+  address: {
+    street: '',
+    city: '',
+    state: '',
+    pincode: ''
+  },
+  category: '',
+  candidateQuantity: '',
+  experience: {
+    years: '',
+    months: '',
+    days: ''
+  },
+  jobLocation: {
+    city: '',
+    state: ''
+  },
+  businessDocument: null,
+  otp: '' // ← ADD THIS LINE
+});
         setDocumentPreview(null);
+        setOtpVerified(false);
+        setOtpSent(false);
         
         setTimeout(() => navigate('/'), 3000);
       }
@@ -385,11 +390,6 @@ const CompanyRegistration = () => {
           <LanguageSwitcher />
           <h1>{t('company_title')}</h1>
           <p>{t('company_subtitle')}</p>
-          
-          {/* Information banner about OTP being disabled */}
-          <div className="info-banner">
-            <span>ℹ️ OTP verification is temporarily disabled for testing</span>
-          </div>
         </div>
 
         {/* Progress Bar */}
@@ -449,24 +449,49 @@ const CompanyRegistration = () => {
                       placeholder={t('mobile')}
                       pattern="[6-9][0-9]{9}"
                       maxLength="10"
-                      disabled={loading}
+                      disabled={otpVerified || loading}
                     />
-                    {/* COMMENTED: OTP button - showing but with disabled functionality */}
                     <button 
                       type="button" 
                       className="otp-btn"
                       onClick={handleSendOtp}
-                      disabled={!validateMobile(formData.mobile) || loading}
+                      disabled={!validateMobile(formData.mobile) || otpVerified || loading || otpLoading}
                     >
-                      {otpLoading ? 'Sending...' : 'Send OTP (Disabled)'}
+                      {otpLoading ? 'Sending...' : (otpVerified ? 'Verified' : 'Send OTP')}
                     </button>
                   </div>
-                  <p className="helper-text">OTP verification is temporarily disabled</p>
                 </div>
+
+                {otpSent && !otpVerified && (
+                  <div className="form-group">
+                    <label>Enter OTP *</label>
+                    <div className="otp-input-group">
+                      <input
+                        type="text"
+                        name="otp"
+                        value={formData.otp}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="Enter 6-digit OTP"
+                        pattern="[0-9]{6}"
+                        maxLength="6"
+                        disabled={otpVerified || loading}
+                      />
+                      <button 
+                        type="button" 
+                        className="verify-otp-btn"
+                        onClick={handleVerifyOtp}
+                        disabled={formData.otp.length !== 6 || otpVerified || loading || otpLoading}
+                      >
+                        {otpLoading ? 'Verifying...' : 'Verify OTP'}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {otpVerified && (
                   <div className="success-badge">
-                    ✓ Mobile verification bypassed for testing
+                    ✓ Mobile number verified successfully
                   </div>
                 )}
 
@@ -543,7 +568,7 @@ const CompanyRegistration = () => {
                   type="button" 
                   className="next-btn" 
                   onClick={nextStep}
-                  disabled={loading}
+                  disabled={loading || !otpVerified}
                 >
                   {t('next')}
                 </button>
@@ -558,24 +583,19 @@ const CompanyRegistration = () => {
               
               <div className="form-grid">
                 <div className="form-group full-width">
-                  <label>{t('required_categories')} *</label>
-                  <div className="categories-grid">
+                  <label>{t('required_category')} *</label>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                    required
+                    disabled={loading}
+                  >
+                    <option value="">Select Category</option>
                     {categories.map(category => (
-                      <label key={category} className="category-checkbox">
-                        <input
-                          type="checkbox"
-                          name="categories"
-                          value={category}
-                          checked={(formData.categories || []).includes(category)}
-                          onChange={handleInputChange}
-                          disabled={loading}
-                        />
-                        <span className="checkmark"></span>
-                        {t(category)}
-                      </label>
+                      <option key={category} value={category}>{t(category)}</option>
                     ))}
-                  </div>
-                  <p className="helper-text">Selected: {formData.categories.length} categories</p>
+                  </select>
                 </div>
 
                 <div className="form-group">

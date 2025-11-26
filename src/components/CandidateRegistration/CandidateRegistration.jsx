@@ -1,11 +1,9 @@
-
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { candidateAPI } from '../../services/api';
-//import  {qr-code} from '../../../public/images/qr-code.png';
 import LanguageSwitcher from '../common/LanguageSwitcher';
 import './CandidateRegistration.css';
 
@@ -15,6 +13,8 @@ const CandidateRegistration = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  
   const [formData, setFormData] = useState({
     fullName: '',
     mobile: '',
@@ -28,13 +28,13 @@ const CandidateRegistration = () => {
     category: '',
     jobLocationCity: '',
     customCity: '',
-    upiTransactionId: '',
-    uidNumber: ''
+    uidNumber: '', // UID is optional
+    paymentVerified: false
   });
 
   // Camera and photo states
   const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(true);
+  const [otpVerified, setOtpVerified] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraLoading, setCameraLoading] = useState(false);
@@ -60,51 +60,58 @@ const CandidateRegistration = () => {
     return /^\d{6}$/.test(pincode);
   };
 
-  const validateUpiTransactionId = (transactionId) => {
-    if (!transactionId) return true; // Optional field
-    return /^[a-zA-Z0-9]{23}$/.test(transactionId);
-  };
+  // FIXED: Proper step validation
+  const validateStep = (stepNumber) => {
+    switch (stepNumber) {
+      case 1:
+        if (!formData.fullName.trim()) {
+          toast.error('Please enter your full name');
+          return false;
+        }
+        if (!validateMobile(formData.mobile)) {
+          toast.error('Please enter a valid 10-digit mobile number starting with 6-9');
+          return false;
+        }
+        if (!otpVerified) {
+          toast.error('Please verify your mobile number with OTP');
+          return false;
+        }
+        if (!formData.address.villageTownCity.trim()) {
+          toast.error('Please enter your village/town/city');
+          return false;
+        }
+        if (!validatePincode(formData.address.pincode)) {
+          toast.error('Please enter a valid 6-digit pincode');
+          return false;
+        }
+        return true;
 
-  const validateForm = (step) => {
-    if (step === 1) {
-      if (!formData.fullName.trim()) {
-        toast.error('Please enter your full name');
-        return false;
-      }
-      if (!validateMobile(formData.mobile)) {
-        toast.error('Please enter a valid 10-digit mobile number starting with 6-9');
-        return false;
-      }
-      if (!formData.address.villageTownCity.trim()) {
-        toast.error('Please enter your village/town/city');
-        return false;
-      }
-      if (!validatePincode(formData.address.pincode)) {
-        toast.error('Please enter a valid 6-digit pincode');
-        return false;
-      }
+      case 2:
+        if (!formData.category) {
+          toast.error('Please select a job category');
+          return false;
+        }
+        if (!formData.jobLocationCity) {
+          toast.error('Please select a job location');
+          return false;
+        }
+        if (formData.jobLocationCity === 'other' && !formData.customCity.trim()) {
+          toast.error('Please enter your city name');
+          return false;
+        }
+        // UID is optional, no validation needed
+        return true;
+
+      case 3:
+        if (!formData.paymentVerified) {
+          toast.error('Please complete the payment process');
+          return false;
+        }
+        return true;
+
+      default:
+        return true;
     }
-
-    if (step === 2) {
-      if (!formData.category) {
-        toast.error('Please select a job category');
-        return false;
-      }
-      if (!formData.jobLocationCity) {
-        toast.error('Please select a job location');
-        return false;
-      }
-      if (formData.jobLocationCity === 'other' && !formData.customCity.trim()) {
-        toast.error('Please enter your city name');
-        return false;
-      }
-      if (!validateUpiTransactionId(formData.upiTransactionId)) {
-        toast.error('UPI Transaction ID must be exactly 23 alphanumeric characters');
-        return false;
-      }
-    }
-
-    return true;
   };
 
   const handleInputChange = (e) => {
@@ -139,7 +146,7 @@ const CandidateRegistration = () => {
     }
   };
 
-  // Camera functionality
+  // Camera functionality (unchanged)
   const startCamera = async () => {
     setCameraLoading(true);
     try {
@@ -180,28 +187,20 @@ const CandidateRegistration = () => {
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
 
-    // Set canvas dimensions to match video
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-
-    // Draw current video frame to canvas
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Convert canvas to blob
     canvas.toBlob((blob) => {
       if (blob) {
         const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
         
-        // Update form data
         setFormData(prev => ({ ...prev, photo: file }));
         
-        // Create preview
         const previewUrl = URL.createObjectURL(blob);
         setPhotoPreview(previewUrl);
         
-        // Stop camera
         stopCamera();
-        
         toast.success('Selfie captured successfully!');
       }
     }, 'image/jpeg', 0.8);
@@ -215,7 +214,7 @@ const CandidateRegistration = () => {
     }
   };
 
-  // OTP functionality (commented for testing)
+  // OTP functionality (unchanged)
   const handleSendOtp = async () => {
     if (!validateMobile(formData.mobile)) {
       toast.error('Please enter a valid 10-digit mobile number');
@@ -224,11 +223,23 @@ const CandidateRegistration = () => {
 
     setOtpLoading(true);
     try {
-      console.log('OTP functionality commented for testing');
-      setOtpSent(true);
-      toast.info('OTP functionality is temporarily disabled. You can proceed.');
+      const response = await candidateAPI.sendOtp(formData.mobile);
+      
+      if (response.data.success) {
+        setOtpSent(true);
+        toast.success('OTP sent successfully to your mobile number!');
+      }
     } catch (error) {
-      toast.error('Failed to send OTP. Please try again.');
+      console.error('Send OTP error:', error);
+      let errorMessage = 'Failed to send OTP. Please try again.';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        errorMessage = error.response.data.errors[0]?.msg || errorMessage;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setOtpLoading(false);
     }
@@ -242,20 +253,268 @@ const CandidateRegistration = () => {
 
     setOtpLoading(true);
     try {
-      console.log('OTP verification commented for testing');
-      setOtpVerified(true);
-      toast.success('OTP verified successfully!');
+      const response = await candidateAPI.verifyOtp(formData.mobile, formData.otp);
+      
+      if (response.data.success) {
+        setOtpVerified(true);
+        toast.success('OTP verified successfully!');
+      }
     } catch (error) {
-      toast.error('Invalid OTP. Please try again.');
+      console.error('Verify OTP error:', error);
+      let errorMessage = 'Invalid OTP. Please try again.';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      toast.error(errorMessage);
+      setOtpVerified(false);
     } finally {
       setOtpLoading(false);
     }
   };
 
+  // Razorpay Payment Integration
+  // const initiatePayment = async () => {
+  //   // FIXED: Only validate step 2 requirements for payment
+  //   if (!formData.category || !formData.jobLocationCity) {
+  //     toast.error('Please complete professional information first');
+  //     return;
+  //   }
+
+  //   setPaymentLoading(true);
+  //   try {
+  //     // First create order on backend
+  //     const orderResponse = await candidateAPI.createOrder({
+  //       amount: 19900, // ₹199 in paise
+  //       currency: 'INR',
+  //       receipt: `receipt_${Date.now()}`,
+  //       notes: {
+  //         mobile: formData.mobile,
+  //         name: formData.fullName
+  //       }
+  //     });
+
+  //     const { id: orderId, amount, currency } = orderResponse.data;
+
+  //     // Load Razorpay script dynamically
+  //     const script = document.createElement('script');
+  //     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+  //     script.async = true;
+  //     document.body.appendChild(script);
+
+  //     script.onload = () => {
+  //       const options = {
+  //         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+  //         amount: amount,
+  //         currency: currency,
+  //         name: 'The Kamakshi',
+  //         description: 'Candidate Registration Fee',
+  //         order_id: orderId,
+  //         handler: async function (response) {
+  //           try {
+  //             // Verify payment on backend
+  //             const verifyResponse = await candidateAPI.verifyPayment({
+  //               razorpay_order_id: response.razorpay_order_id,
+  //               razorpay_payment_id: response.razorpay_payment_id,
+  //               razorpay_signature: response.razorpay_signature
+  //             });
+
+  //             if (verifyResponse.data.success) {
+  //               setFormData(prev => ({ ...prev, paymentVerified: true }));
+  //               toast.success('Payment verified successfully!');
+  //               setPaymentLoading(false);
+  //             }
+  //           } catch (error) {
+  //             console.error('Payment verification error:', error);
+  //             toast.error('Payment verification failed. Please try again.');
+  //             setPaymentLoading(false);
+  //           }
+  //         },
+  //         prefill: {
+  //           name: formData.fullName,
+  //           contact: formData.mobile,
+  //         },
+  //         notes: {
+  //           type: 'candidate_registration'
+  //         },
+  //         theme: {
+  //           color: '#3B82F6'
+  //         },
+  //         modal: {
+  //           ondismiss: function() {
+  //             setPaymentLoading(false);
+  //             toast.info('Payment cancelled');
+  //           }
+  //         }
+  //       };
+
+  //       const rzp = new window.Razorpay(options);
+  //       rzp.open();
+  //     };
+
+  //     script.onerror = () => {
+  //       toast.error('Failed to load payment gateway');
+  //       setPaymentLoading(false);
+  //     };
+
+  //   } catch (error) {
+  //     console.error('Payment initiation error:', error);
+  //     toast.error('Failed to initiate payment. Please try again.');
+  //     setPaymentLoading(false);
+  //   }
+  // };
+  // Razorpay Payment Integration - UPDATED VERSION
+const initiatePayment = async () => {
+  if (!formData.category || !formData.jobLocationCity) {
+    toast.error('Please complete professional information first');
+    return;
+  }
+
+  setPaymentLoading(true);
+  try {
+    console.log('Initiating payment...');
+    
+    // First create order on backend
+    const orderResponse = await candidateAPI.createOrder({
+      amount: 19900, // ₹199 in paise
+      currency: 'INR',
+      receipt: `receipt_${Date.now()}`,
+      notes: {
+        mobile: formData.mobile,
+        name: formData.fullName
+      }
+    });
+
+    console.log('Order created:', orderResponse.data);
+
+    const { order } = orderResponse.data;
+
+    // Check if Razorpay is already loaded
+    if (window.Razorpay) {
+      console.log('Razorpay already loaded, opening checkout...');
+      openRazorpayCheckout(order);
+    } else {
+      console.log('Loading Razorpay script...');
+      // Load Razorpay script dynamically
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      
+      script.onload = () => {
+        console.log('Razorpay script loaded successfully');
+        if (window.Razorpay) {
+          openRazorpayCheckout(order);
+        } else {
+          console.error('Razorpay not available after script load');
+          toast.error('Payment gateway failed to load. Please refresh and try again.');
+          setPaymentLoading(false);
+        }
+      };
+
+      script.onerror = (error) => {
+        console.error('Failed to load Razorpay script:', error);
+        toast.error('Failed to load payment gateway. Please check your internet connection.');
+        setPaymentLoading(false);
+      };
+
+      document.body.appendChild(script);
+    }
+
+  } catch (error) {
+    console.error('Payment initiation error:', error);
+    toast.error('Failed to initiate payment. Please try again.');
+    setPaymentLoading(false);
+  }
+};
+
+// Separate function to open Razorpay checkout
+const openRazorpayCheckout = (order) => {
+  console.log('Opening Razorpay checkout with order:', order);
+  
+  const options = {
+    key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_RhyhtxdaodRUaM', // Use your test key directly for testing
+    amount: order.amount,
+    currency: order.currency,
+    name: 'The Kamakshi',
+    description: 'Candidate Registration Fee',
+    order_id: order.id,
+    handler: async function (response) {
+      console.log('Payment successful:', response);
+      try {
+        // Verify payment on backend
+        const verifyResponse = await candidateAPI.verifyPayment({
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_signature: response.razorpay_signature
+        });
+
+        if (verifyResponse.data.success) {
+          setFormData(prev => ({ ...prev, paymentVerified: true }));
+          toast.success('Payment verified successfully!');
+        }
+      } catch (error) {
+        console.error('Payment verification error:', error);
+        toast.error('Payment verification failed. Please contact support.');
+      } finally {
+        setPaymentLoading(false);
+      }
+    },
+    prefill: {
+      name: formData.fullName,
+      contact: formData.mobile,
+      email: 'babludangi2000@gmail.com' // Required by Razorpay
+    },
+    notes: {
+      type: 'candidate_registration',
+      candidate_name: formData.fullName,
+      candidate_mobile: formData.mobile
+    },
+    theme: {
+      color: '#3B82F6'
+    },
+    modal: {
+      ondismiss: function() {
+        console.log('Payment modal closed by user');
+        setPaymentLoading(false);
+        toast.info('Payment cancelled');
+      }
+    },
+    // Add these for better debugging
+    config: {
+      display: {
+        blocks: {
+          banks: {
+            name: "Pay using UPI",
+            instruments: [
+              {
+                method: "upi"
+              }
+            ]
+          }
+        }
+      }
+    }
+  };
+
+  console.log('Razorpay options:', options);
+
+  try {
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+    console.log('Razorpay checkout opened successfully');
+  } catch (error) {
+    console.error('Error opening Razorpay:', error);
+    toast.error('Failed to open payment gateway. Please try again.');
+    setPaymentLoading(false);
+  }
+};
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateForm(1) || !validateForm(2)) {
+    // FIXED: Only validate step 3 for final submission
+    if (!validateStep(3)) {
       return;
     }
 
@@ -272,16 +531,13 @@ const CandidateRegistration = () => {
       submitData.append('category', formData.category);
       submitData.append('jobLocationCity', formData.jobLocationCity);
       submitData.append('customCity', formData.customCity || '');
-      submitData.append('upiTransactionId', formData.upiTransactionId || '');
-      submitData.append('uidNumber', formData.uidNumber || '');
+      submitData.append('uidNumber', formData.uidNumber || ''); // UID is optional
+      submitData.append('paymentVerified', formData.paymentVerified);
       
       if (formData.photo) {
         submitData.append('photo', formData.photo);
       }
 
-      console.log('Submitting candidate data to backend...');
-
-      // Show loading toast
       const loadingToast = toast.loading('Submitting registration...');
 
       const response = await candidateAPI.register(submitData);
@@ -305,10 +561,12 @@ const CandidateRegistration = () => {
           category: '',
           jobLocationCity: '',
           customCity: '',
-          upiTransactionId: '',
-          uidNumber: ''
+          uidNumber: '',
+          paymentVerified: false
         });
         setPhotoPreview(null);
+        setOtpVerified(false);
+        setOtpSent(false);
         
         setTimeout(() => navigate('/'), 3000);
       }
@@ -335,7 +593,7 @@ const CandidateRegistration = () => {
   };
 
   const nextStep = () => {
-    if (!validateForm(step)) {
+    if (!validateStep(step)) {
       return;
     }
     
@@ -344,14 +602,13 @@ const CandidateRegistration = () => {
 
   const prevStep = () => {
     setStep(step - 1);
-    // Stop camera when going back
     if (isCameraActive) {
       stopCamera();
     }
   };
 
   // Cleanup camera on unmount
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -382,10 +639,6 @@ const CandidateRegistration = () => {
           <LanguageSwitcher />
           <h1>{t('candidate_title')}</h1>
           <p>{t('candidate_subtitle')}</p>
-          
-          <div className="info-banner">
-            <span>ℹ️ OTP verification is temporarily disabled for testing</span>
-          </div>
         </div>
 
         {/* Progress Bar */}
@@ -397,6 +650,10 @@ const CandidateRegistration = () => {
           <div className={`progress-step ${step >= 2 ? 'active' : ''}`}>
             <div className="step-number">2</div>
             <span>{t('professional_info')}</span>
+          </div>
+          <div className={`progress-step ${step >= 3 ? 'active' : ''}`}>
+            <div className="step-number">3</div>
+            <span>Payment</span>
           </div>
         </div>
 
@@ -432,23 +689,49 @@ const CandidateRegistration = () => {
                       placeholder={t('mobile')}
                       pattern="[6-9][0-9]{9}"
                       maxLength="10"
-                      disabled={loading}
+                      disabled={otpVerified || loading}
                     />
                     <button 
                       type="button" 
                       className="otp-btn"
                       onClick={handleSendOtp}
-                      disabled={!validateMobile(formData.mobile) || loading}
+                      disabled={!validateMobile(formData.mobile) || otpVerified || loading || otpLoading}
                     >
-                      {otpLoading ? 'Sending...' : 'Send OTP (Disabled)'}
+                      {otpLoading ? 'Sending...' : (otpVerified ? 'Verified' : 'Send OTP')}
                     </button>
                   </div>
-                  <p className="helper-text">OTP verification is temporarily disabled</p>
                 </div>
+
+                {otpSent && !otpVerified && (
+                  <div className="form-group">
+                    <label>Enter OTP *</label>
+                    <div className="otp-input-group">
+                      <input
+                        type="text"
+                        name="otp"
+                        value={formData.otp}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="Enter 6-digit OTP"
+                        pattern="[0-9]{6}"
+                        maxLength="6"
+                        disabled={otpVerified || loading}
+                      />
+                      <button 
+                        type="button" 
+                        className="verify-otp-btn"
+                        onClick={handleVerifyOtp}
+                        disabled={formData.otp.length !== 6 || otpVerified || loading || otpLoading}
+                      >
+                        {otpLoading ? 'Verifying...' : 'Verify OTP'}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {otpVerified && (
                   <div className="success-badge">
-                    ✓ Mobile verification bypassed for testing
+                    ✓ Mobile number verified successfully
                   </div>
                 )}
 
@@ -493,7 +776,7 @@ const CandidateRegistration = () => {
                 </div>
 
                 <div className="form-group full-width">
-                  <label>{t('photo')}</label>
+                  <label>{t('photo')} (Optional)</label>
                   <div className="photo-upload-section">
                     {photoPreview ? (
                       <div className="photo-preview">
@@ -597,7 +880,7 @@ const CandidateRegistration = () => {
                   type="button" 
                   className="next-btn" 
                   onClick={nextStep}
-                  disabled={loading}
+                  disabled={loading || !otpVerified}
                 >
                   {t('next')}
                 </button>
@@ -605,7 +888,7 @@ const CandidateRegistration = () => {
             </div>
           )}
 
-          {/* Step 2: Professional Information & Payment */}
+          {/* Step 2: Professional Information */}
           {step === 2 && (
             <div className="form-step">
               <h2>{t('professional_info')}</h2>
@@ -658,71 +941,97 @@ const CandidateRegistration = () => {
                   </div>
                 )}
 
-                {/* Payment Information Section */}
-                <div className="form-group full-width payment-section">
-                  <h3>{t('payment')}</h3>
-                  <p className="payment-info">
-                    {t('reg_fee')}
+                {/* UID Number - Optional Field */}
+                <div className="form-group full-width">
+                  <label>{t('uid_number')} (Optional)</label>
+                  <input
+                    type="text"
+                    name="uidNumber"
+                    value={formData.uidNumber}
+                    onChange={handleInputChange}
+                    placeholder={t('uid_number')}
+                    disabled={loading}
+                  />
+                  <p className="helper-text">Enter your Aadhaar or other identification number (optional)</p>
+                </div>
+              </div>
+
+              <div className="form-actions">
+                <button 
+                  type="button" 
+                  className="prev-btn" 
+                  onClick={prevStep}
+                  disabled={loading}
+                >
+                  {t('previous')}
+                </button>
+                <button 
+                  type="button" 
+                  className="next-btn" 
+                  onClick={nextStep}
+                  disabled={loading || !formData.category || !formData.jobLocationCity}
+                >
+                  Proceed to Payment
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Payment */}
+          {step === 3 && (
+            <div className="form-step">
+              <h2>Complete Registration</h2>
+              
+              <div className="payment-section">
+                <div className="payment-info-card">
+                  <h3>Registration Fee</h3>
+                  <div className="fee-amount">₹199</div>
+                  <p className="fee-description">
+                    One-time registration fee for profile verification and lifetime access to job opportunities
                   </p>
-
-                  <div className="payment-methods">
-                    <div className="payment-method">
-                      <h4>{t('scan_qr')}</h4>
-                      <div className="qr-code">
-                        <div className="qr-placeholder">
-                          [QR Code Image]
-                          <p>Scan this QR code to pay ₹199</p>
-                        </div>
-                      </div>
+                  
+                  <div className="payment-features">
+                    <div className="feature">
+                      <span className="feature-icon">✓</span>
+                      <span>Profile Verification</span>
                     </div>
-
-                    <div className="payment-method">
-                      <h4>{t('bank_transfer')}</h4>
-                      <div className="bank-details">
-                        <div className="bank-info">
-                          <strong>{t('account_number')}:</strong> 123456789012
-                        </div>
-                        <div className="bank-info">
-                          <strong>{t('bank_name')}:</strong> State Bank of India
-                        </div>
-                        <div className="bank-info">
-                          <strong>{t('ifsc_code')}:</strong> SBIN0001234
-                        </div>
-                        <div className="bank-info">
-                          <strong>{t('account_holder')}:</strong> WorkForce Connect
-                        </div>
-                      </div>
+                    <div className="feature">
+                      <span className="feature-icon">✓</span>
+                      <span>Lifetime Job Access</span>
+                    </div>
+                    <div className="feature">
+                      <span className="feature-icon">✓</span>
+                      <span>Priority Matching</span>
+                    </div>
+                    <div className="feature">
+                      <span className="feature-icon">✓</span>
+                      <span>Dedicated Support</span>
                     </div>
                   </div>
 
-                  <div className="payment-fields">
-                    <div className="form-group">
-                      <label>{t('upi_transaction_id')}</label>
-                      <input
-                        type="text"
-                        name="upiTransactionId"
-                        value={formData.upiTransactionId}
-                        onChange={handleInputChange}
-                        placeholder="Enter 23-character UPI Transaction ID"
-                        pattern="[a-zA-Z0-9]{23}"
-                        maxLength="23"
-                        disabled={loading}
-                      />
-                      <p className="helper-text">Must be exactly 23 alphanumeric characters</p>
+                  {formData.paymentVerified ? (
+                    <div className="payment-success">
+                      <div className="success-icon">✓</div>
+                      <h4>Payment Verified Successfully!</h4>
+                      <p>Your registration is now complete</p>
                     </div>
-
-                    <div className="form-group">
-                      <label>{t('uid_number')}</label>
-                      <input
-                        type="text"
-                        name="uidNumber"
-                        value={formData.uidNumber}
-                        onChange={handleInputChange}
-                        placeholder={t('uid_number')}
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
+                  ) : (
+                    <button 
+                      type="button"
+                      className="payment-btn"
+                      onClick={initiatePayment}
+                      disabled={paymentLoading || loading}
+                    >
+                      {paymentLoading ? (
+                        <>
+                          <div className="button-spinner"></div>
+                          Processing Payment...
+                        </>
+                      ) : (
+                        'Pay Registration Fee - ₹199'
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -737,7 +1046,11 @@ const CandidateRegistration = () => {
                   </p>
                 </div>
                 <label className="policy-checkbox">
-                  <input type="checkbox" required disabled={loading} />
+                  <input 
+                    type="checkbox" 
+                    required 
+                    disabled={loading || !formData.paymentVerified}
+                  />
                   <span>I have read and agree to the terms and conditions</span>
                 </label>
               </div>
@@ -754,7 +1067,7 @@ const CandidateRegistration = () => {
                 <button 
                   type="submit" 
                   className="submit-btn" 
-                  disabled={loading}
+                  disabled={loading || !formData.paymentVerified}
                 >
                   {loading ? (
                     <>
@@ -762,7 +1075,7 @@ const CandidateRegistration = () => {
                       Submitting Registration...
                     </>
                   ) : (
-                    'Submit Registration'
+                    'Complete Registration'
                   )}
                 </button>
               </div>
