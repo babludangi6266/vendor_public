@@ -309,15 +309,118 @@ h1, h2, h3, h4, h5, h6, .logo span, .hero-btn, .reg-btn, .nav-btn, .stat h3, .ab
 }
 
 /* Mobile Responsiveness */
+/* --- Mobile Responsiveness --- */
 @media (max-width: 768px) {
-  .aesthetic-marquee-container {
-    max-width: 100%; /* Full width on mobile */
-    margin-bottom: 1.5rem;
+  /* Fix Navigation spacing */
+  .nav-container { padding: 0.5rem 1rem; }
+  .nav-links { display: none; }
+  .mobile-menu { display: block; }
+  
+  /* Fix Hero Section Padding & Height */
+  .hero-section-home {
+    padding: 100px 1rem 4rem 1rem; /* Less side padding, adequate top padding */
+    min-height: auto; /* Allow height to grow with content */
+    display: flex;
+    align-items: center; /* Center vertically */
   }
+
+  /* Fix Hero Content Grid */
+  .hero-content {
+    grid-template-columns: 1fr; /* Stack elements */
+    gap: 2rem;
+    text-align: center;
+    width: 100%;
+  }
+
+  /* Fix The Marquee (Early Bird) */
+  .aesthetic-marquee-container {
+    max-width: 100%;
+    margin-bottom: 1rem;
+    font-size: 0.8rem; /* Smaller text inside marquee */
+  }
+  
   .marquee-content {
+    gap: 0.2rem; /* Tighter gap for mobile */
+  }
+
+  /* Fix The Badge */
+  .badge {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  /* --- FIX THE GIANT TITLE --- */
+  .hero-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .aesthetic-handwritten-title {
+    font-size: 2.2rem; /* Drastically reduced from 3.8rem */
+    line-height: 1.3;
+    margin-bottom: 1rem;
+    word-wrap: break-word; /* Prevent overflow */
+  }
+
+  .handwritten-word {
+    font-size: 2.5rem; /* Reduced from 4.5rem */
+    transform: rotate(-3deg) translateY(-2px);
+  }
+
+  .hand-drawn-highlight {
+    bottom: -8px; /* Adjust position for smaller text */
+    height: 30px; /* Smaller stroke */
+  }
+
+  /* Fix Subtitle */
+  .hero-subtitle {
+    font-size: 1rem;
+    line-height: 1.5;
+    margin-bottom: 2rem;
+    max-width: 100%;
+  }
+
+  /* Fix Buttons */
+  .hero-buttons {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .hero-btn {
+    width: 100%;
+    max-width: 100%; /* Full width buttons on mobile */
+    padding: 0.8rem 1rem;
     font-size: 1rem;
   }
+
+  /* Fix Stats */
+  .hero-stats {
+    grid-template-columns: repeat(2, 1fr); /* 2x2 Grid */
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+  
+  .stat h3 {
+    font-size: 1.5rem;
+  }
+
+  /* Adjust Footer for Mobile */
+  .footer-contact-details { text-align: center; }
+  .footer-contact-item { 
+    justify-content: center; 
+    text-align: left; 
+    max-width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .footer-bottom .container { flex-direction: column; gap: 1rem; text-align: center; }
+  .footer-links { justify-content: center; flex-wrap: wrap; }
 }
+
 /* --- Aesthetic Handwritten Typography --- */
 
 .aesthetic-handwritten-title {
@@ -909,4 +1012,25 @@ h1, h2, h3, h4, h5, h6, .logo span, .hero-btn, .reg-btn, .nav-btn, .stat h3, .ab
   /* Logo adjustments for small mobile */
   .logo-icon img { height: 40px; }
   .logo span { font-size: 1.1rem; }
+}
+
+@media (max-width: 480px) {
+  .logo-icon img { height: 35px; } /* Smaller logo */
+  
+  .hero-section-home {
+    padding-top: 110px; /* Ensure content clears navbar */
+  }
+
+  .aesthetic-handwritten-title {
+    font-size: 1.8rem; /* Even smaller title */
+  }
+
+  .handwritten-word {
+    font-size: 2.1rem;
+  }
+  
+  .hero-stats {
+    grid-template-columns: 1fr; /* Stack stats vertically on very small screens */
+    gap: 1rem;
+  }
 }

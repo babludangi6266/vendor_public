@@ -1,8 +1,11 @@
+
 import axios from 'axios';
 
+// Update this URL to your deployed Render URL if not already done
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://vendor-backend-5zph.onrender.com/api';
+//const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
-// Create axios instance
+// Create axios instance (Standard JSON)
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -11,15 +14,12 @@ const api = axios.create({
   timeout: 30000,
 });
 
-// For file uploads
+// For file uploads (Multipart)
 const apiWithFormData = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'multipart/form-data',
-  },
-  timeout: 60000,
+  
+  timeout: 180000, 
 });
-
 
 export const candidateAPI = {
   register: (candidateData) => {
@@ -31,17 +31,11 @@ export const candidateAPI = {
   verifyOtp: (mobile, otp) => {
     return api.post('/candidates/verify-otp', { mobile, otp });
   },
-  // FIXED: Payment endpoints should be under candidates
-  createOrder: (orderData) => {
-    return api.post('/candidates/create-order', orderData); 
-  },
-  verifyPayment: (paymentData) => {
-    return api.post('/candidates/verify-payment', paymentData); 
-  },
+  
+
   getAll: () => api.get('/candidates'),
 };
 
-// Company API calls  
 export const companyAPI = {
   register: (companyData) => apiWithFormData.post('/companies/register', companyData),
   sendOtp: (mobile) => api.post('/companies/send-otp', { mobile }),
@@ -49,23 +43,20 @@ export const companyAPI = {
   getAll: () => api.get('/companies'),
 };
 
-// Enhanced response interceptor
+// Response interceptor (Keep as is)
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
-    console.error('API Error Details:', {
-      url: error.config?.url,
-      status: error.response?.status,
-      message: error.response?.data?.message,
-      data: error.response?.data
-    });
-    
-    if (error.code === 'ECONNREFUSED') {
-      console.error('Backend server is not running. Please start the backend server.');
-    }
-    
+    console.error('API Error:', error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
+
+
+apiWithFormData.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('Upload Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }
 );
