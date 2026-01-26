@@ -1,11 +1,8 @@
 
 import axios from 'axios';
 
-// Update this URL to your deployed Render URL if not already done
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://vendor-backend-5zph.onrender.com/api';
-//const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.thekamakshi.com/api';
 
-// Create axios instance (Standard JSON)
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
