@@ -430,7 +430,7 @@ const EarlyBirdMarquee = () => {
     <div className="marquee-content">
       <span>🚀 EARLY BIRD OFFER!</span>
       <span className="highlight">FREE Registration</span>
-      <span>for first 1000 candidates!</span>
+      <span>for first 500 candidates!</span>
       <span>⏳ Hurry Up!</span>
     </div>
   );
@@ -571,10 +571,10 @@ const HomePage = () => {
             </p>
             <div className="hero-buttons">
               <button onClick={() => navigate('/candidate-registration')} className="hero-btn primary-btn">
-                Find Perfect Opportunity
+                Find Work
               </button>
               <button onClick={() => navigate('/company-registration')} className="hero-btn secondary-btn">
-                Find Skilled Professionals
+                Hire Talent
               </button>
             </div>
             <div className="hero-stats">
@@ -597,7 +597,6 @@ const HomePage = () => {
             <p className="trusted-label">Trusted by organizations across all sectors</p>
             <div className="logo-ticker-wrap">
               <div className="logo-ticker">
-                {/* Duplicate array 3 times for smoother infinite scroll */}
                 {[...trustLogos, ...trustLogos, ...trustLogos].map((sector, index) => (
                   <div key={index} className="logo-item">
                     <span>{sector}</span>
