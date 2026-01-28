@@ -286,15 +286,21 @@ h1, h2, h3, h4, h5, h6, .logo span, .hero-btn, .reg-btn, .nav-btn, .stat h3, .ab
 }
 
 /* Highlight the word "FREE" */
+.marquee-content .strikethrough {
+  text-decoration: line-through;
+  color: rgba(247, 229, 229, 0.6);
+  font-weight: 300;
+}
+
+/* Highlight the FREE offer */
 .marquee-content .highlight {
-  color: #55e800; /* Gold color */
-  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  color: #63f80cac;
+  text-shadow: 0 0 10px rgba(85, 232, 0, 0.5);
   font-weight: 900;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
   padding: 0 8px;
   border-radius: 8px;
 }
-
 /* The Animation Logic */
 @keyframes aesthetic-scroll {
   0% {
